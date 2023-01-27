@@ -1,6 +1,7 @@
 """Implements the ChatGPT Source Checker"""
 import re
-import urllib
+from scholarly import scholarly
+
 
 class SourceChecker:
     """
@@ -34,8 +35,9 @@ class SourceChecker:
     def __init__(self, path):
         references = self.loadSources(path)
         web, research = self.parseSources(references)
-        print(web)
-        print(research)
+        research_res = self.queryResearch(research, 5)
+        print(research_res)
+
 
     @staticmethod
     def loadSources(path):
@@ -45,7 +47,6 @@ class SourceChecker:
             file.close()
 
         sources = []
-        print(texts)
 
         # extract the references
         for i in range(len(texts)):
@@ -68,7 +69,6 @@ class SourceChecker:
             num_filter = lambda x: x.isalpha() or x == "\""
             i = source.find(next(filter(num_filter, source)))
             plain_source = source[i:]
-            print(plain_source)
 
             # categorize the sources
             web_regex1 = re.compile(r'(.+). "(.+)." (.+), (\d{4}).')
@@ -106,10 +106,54 @@ class SourceChecker:
 
         return web, research
 
-    # TODO: query google scholar and check whether the reference article exists
     @staticmethod
-    def queryResearch(sources):
-        pass
+    def queryResearch(sources, count):
+
+        research_result = []
+
+        for source in sources:
+            # clean the edition mark
+            if "ed." in source['title']:
+                title = re.search("(.+) \(", source['title'])
+                title = title.group(1)
+            else:
+                title = source['title']
+
+            # query scholarly
+            results = scholarly.search_pubs(title, citations=False, year_low=source['year'], year_high=source['year'])
+
+            # parse the output and compare
+            match = False
+            author = source['author'].split(",")
+            author = author[0]
+            for counter, result in enumerate(results):
+                if title.lower() in result['bib']['title'].lower():
+                    for person in result['bib']['author']:
+                        if author in result['bib']['title'] or author in person:
+                            # this reference is genuine
+                            research_result.append({
+                                "title": title,
+                                "status": True,
+                                "url": result['pub_url']
+                            })
+                            match = True
+                            break
+                if match:
+                    break
+
+                if counter == count:
+                    break
+
+            if not match:
+                nearest_result = scholarly.search_single_pub(title)
+                research_result.append({
+                    "title": title,
+                    "status": False,
+                    "pub_url": nearest_result['pub_url']
+                })
+
+        return research_result
+
 
     # TODO: query google search and check whether the reference website exists
     @staticmethod
