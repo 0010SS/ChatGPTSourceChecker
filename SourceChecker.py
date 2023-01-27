@@ -1,6 +1,9 @@
 """Implements the ChatGPT Source Checker"""
 import re
 from scholarly import scholarly
+from bs4 import BeautifulSoup
+import requests
+from urllib.parse import quote, urlparse
 
 
 class SourceChecker:
@@ -12,8 +15,8 @@ class SourceChecker:
             - the file must contain the references after keywords "Reference:" or "References:"
             - example:
                 References:
-                    1. "WeChat: The Complete Guide." TechNode, 2020.
-                    2. "WeChat: The Rise of China's All-in-One Super App." The Economist, 2020.
+                    1. Alpaydin, E. (2010). Introduction to machine learning (2nd ed.). Cambridge, MA: MIT Press.
+                    2. Bishop, C. M. (2006). Pattern recognition and machine learning (1st ed.). New York: Springer.
                     3. "WeChat: The Chinese App That's Eating the World." Forbes, 2018.
                     4. "WeChat: The App Changing China's Online Landscape." BBC, 2016.
                     5. "WeChat: The App That's Taking Over China." Business Insider, 2015.
@@ -27,6 +30,9 @@ class SourceChecker:
             - the references could be either from a website or a research article
             - extract the date, title and author
         5. Check the validity of each reference
+            - scrawl Google Scholar for research articles
+            - Raw google search for web articles
+                * the web article might not exist, so recommend the most similar reference
 
     Return:
         output the validity of each reference made by ChatGPT.
@@ -37,7 +43,8 @@ class SourceChecker:
         web, research = self.parseSources(references)
         research_res = self.queryResearch(research, 5)
         print(research_res)
-
+        web_res = self.queryWeb(web, 5)
+        print(web_res)
 
     @staticmethod
     def loadSources(path):
@@ -58,10 +65,15 @@ class SourceChecker:
             raise Exception("Missing keyword: "
                             "The inputted response doesn't contain the keywords 'reference:' or 'references:'")
 
+        # filter the sources to avoid \n or null string
+        string_filter = lambda x: not x == "\n" and not x == ""
+        sources = list(filter(string_filter, sources))
+
         return sources
 
     @staticmethod
     def parseSources(sources):
+
         web, research = [], []
 
         for source in sources:
@@ -90,7 +102,7 @@ class SourceChecker:
                         web.append({
                             "title": match.groups()[0],
                             "publisher": match.groups()[1],
-                            "author": None,
+                            "author": "",
                             "year": match.groups()[2]
                         })
                     else:
@@ -101,7 +113,7 @@ class SourceChecker:
                             "year": match.groups()[1]
                         })
                     break
-            else:
+            else:  # cannot parse the reference
                 raise Exception(f"The reference ({plain_source}) is in an unknown format.")
 
         return web, research
@@ -145,20 +157,116 @@ class SourceChecker:
                     break
 
             if not match:
+                # find the best match
                 nearest_result = scholarly.search_single_pub(title)
                 research_result.append({
                     "title": title,
                     "status": False,
-                    "pub_url": nearest_result['pub_url']
+                    "url": nearest_result['pub_url']
                 })
 
         return research_result
 
-
     # TODO: query google search and check whether the reference website exists
+    def queryWeb(self, sources, count):
+
+        web_result = []
+
+        for source in sources:
+            # init
+            query = source['title'] + " " + source['author'] + source['publisher'] + source['year']
+            headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                                     'Chrome/47.0.2526.106 Safari/537.36'}
+            response = ""
+
+            # query
+            try:  # try google
+                url = f"https://www.google.com/search?q={quote(query)}&oq=google+robots.txt&aqs=chrome.0" \
+                      f".0i512l3j0i30i625l4j69i60.3955j0j4&sourceid=chrome&ie=UTF-8 "
+
+                response = requests.get(url, headers=headers).text
+
+                # parse output
+                soup = BeautifulSoup(response, "lxml")
+                headings = soup.find_all("h3")
+
+                for counter, heading in enumerate(headings):
+                    if source['title'] in heading.getText():
+                        if source['title'] in heading.getText():
+                            web_result.append({
+                                "title": source['title'],
+                                "status": False,
+                                "url": self.GoogleHTML2URLs(soup)[counter]
+                            })
+                        break
+
+                    if counter == count:
+                        web_result.append({
+                            "title": source['title'],
+                            "status": False,
+                            "url": self.GoogleHTML2URLs(soup)[0]
+                        })
+                        break
+
+            # if google fails, try bing
+            except:
+                url = f"https://www.bing.com/search?q={quote(query)}&qs=n&form" \
+                      f"=QBRE&sp=-1&pq=&sc=0-0&sk=&cvid=69C9D9AE5AC64773BB29D000B4D28FC7&ghsh=0&ghacc=0&ghpl= "
+
+                response = requests.get(url, headers=headers).text
+
+                # parse output
+                soup = BeautifulSoup(response, "lxml")
+                headings = soup.find_all("h2")
+
+                for counter, heading in enumerate(headings):
+                    if source['title'] in heading.getText():
+                        # the source might come from bing.com/videos, which is unfavourable
+                        url = soup.find_all("cite")[counter].getText()
+                        if "bing.com" in url:
+                            continue
+
+                        web_result.append({
+                            "title": source['title'],
+                            "status": True,
+                            "url": url
+                        })
+                        break
+
+                    if counter == count:
+                        web_result.append({
+                            "title": source['title'],
+                            "status": False,
+                            "url": soup.find_all("cite")[0].getText()
+                        })
+                        break
+
+        return web_result
+
     @staticmethod
-    def queryWeb(sources):
-        pass
+    def GoogleHTML2URLs(soup):
+
+        urls = []
+
+        # extract the urls
+        a = soup.find_all('a')
+        for i in a:
+            k = i.get('href')
+
+            try:
+                m = re.search("(?P<url>https?://[^\s]+)", k)
+                n = m.group(0)
+                url = n.split('&')[0]
+                domain = urlparse(url)
+                if re.search('google.com', domain.netloc):  # if the url domains in Google, exclude it
+                    continue
+                else:
+                    urls.append(url)
+
+            except BaseException:
+                continue
+
+        return urls
 
 
 test = SourceChecker('Response.txt')
