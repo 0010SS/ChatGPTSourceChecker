@@ -1,0 +1,12 @@
+Machine learning is a method of data analysis that automates analytical model building. It is a branch of artificial intelligence based on the idea that systems can learn from data, identify patterns and make decisions with minimal human intervention.
+References:
+1. Alpaydin, E. (2010). Introduction to machine learning (2nd ed.). Cambridge, MA: MIT Press.
+2. Murphy, K. P. (2012). Machine learning: a probabilistic perspective (1st ed.). Cambridge, MA: MIT Press.
+3. Bishop, C. M. (2006). Pattern recognition and machine learning (1st ed.). New York: Springer.
+4. Hastie, T., Tibshirani, R., & Friedman, J. (2017). The elements of statistical learning: data mining, inference, and prediction (2nd ed.). New York: Springer.
+5. Goodfellow, I., Bengio, Y., & Courville, A. (2016). Deep learning (1st ed.). Cambridge, MA: MIT Press.
+1. Isaacson, Walter. "Steve Jobs." Simon and Schuster, 2011.
+2. "Apple Inc. Form 10-K for the Fiscal Year Ended September 29, 2018." Securities and Exchange Commission, 2018.
+3. "Apple: A History of Innovations." Apple, 2020.
+4. "Apple Inc. SWOT Analysis." MarketLine, 2020.
+5. "The History of Apple Inc." Investopedia, 2021.
