@@ -167,7 +167,6 @@ class SourceChecker:
 
         return research_result
 
-    # TODO: query google search and check whether the reference website exists
     def queryWeb(self, sources, count):
 
         web_result = []
