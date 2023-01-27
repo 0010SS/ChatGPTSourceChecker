@@ -32,19 +32,26 @@ class SourceChecker:
         5. Check the validity of each reference
             - scrawl Google Scholar for research articles
             - Raw google search for web articles
-                * the web article might not exist, so recommend the most similar reference
+                - the web article might not exist, so recommend the most similar reference
 
     Return:
-        output the validity of each reference made by ChatGPT.
+        two lists specifying the validity of research articles and web articles
+            - the list contains dicts, each with three params
+                1. "title": the title specified in the reference
+                2. "status": whether the reference is indeed findable on the internet
+                3. "url": the url of the article found in the internet. If the reference is not
+                    findable on the internet, the param would store the most relevant article
+                    to what is mentioned in the reference
     """
 
     def __init__(self, path):
         references = self.loadSources(path)
         web, research = self.parseSources(references)
-        research_res = self.queryResearch(research, 5)
-        print(research_res)
-        web_res = self.queryWeb(web, 5)
-        print(web_res)
+        self.research_res = self.queryResearch(research, 5)
+        self.web_res = self.queryWeb(web, 5)
+
+    def __repr__(self):
+        return self.research_res, self.web_res
 
     @staticmethod
     def loadSources(path):
