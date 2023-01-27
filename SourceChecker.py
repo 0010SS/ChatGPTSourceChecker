@@ -274,5 +274,4 @@ class SourceChecker:
 
         return urls
 
-
-test = SourceChecker('Response.txt')
+# test = SourceChecker('Response.txt')
