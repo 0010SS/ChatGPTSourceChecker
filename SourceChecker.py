@@ -201,7 +201,7 @@ class SourceChecker:
                         if source['title'] in heading.getText():
                             web_result.append({
                                 "title": source['title'],
-                                "status": False,
+                                "status": True,
                                 "url": self.GoogleHTML2URLs(soup)[counter]
                             })
                         break
