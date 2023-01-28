@@ -1,8 +1,10 @@
 """Main program here"""
 from SourceChecker import SourceChecker
+import ssl
 
 
 def main():
+
     # query the class to receive the output
     path = input("Please input the file's path (请输入文件路径)：")
 
