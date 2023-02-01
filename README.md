@@ -95,7 +95,7 @@ For **Mac Users**
 
 For **Win Users**
 
-* download a ZIP of this repository at Release, and run `WinChatGPTSourceChecker.app`. It will open a terminal window. Please wait for some moments... The program takes a long time to start and run as it and its dependencies are all published onto a single file.
+* download a ZIP of this repository at Release, and run `WinChatGPTSourceChecker.exe`. It will open a terminal window. Please wait for some moments... The program takes a long time to start and run as it and its dependencies are all published onto a single file.
 
 ## Issues
 
